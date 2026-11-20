@@ -1,0 +1,453 @@
+const clock = document.querySelector("#clock");
+
+const weekdayElement = document.querySelector("#weekday");
+const dateElement = document.querySelector("#date");
+
+const formatBtn = document.querySelector("#formatBtn");
+const soundBtn = document.querySelector("#soundBtn");
+const fullscreenBtn = document.querySelector("#fullscreenBtn");
+
+const digits = [
+    ["a", "b", "c", "d", "e", "f"],
+    ["b", "c"],
+    ["a", "b", "g", "e", "d"],
+    ["a", "b", "g", "c", "d"],
+    ["f", "g", "b", "c"],
+    ["a", "f", "g", "c", "d"],
+    ["a", "f", "g", "e", "c", "d"],
+    ["a", "b", "c"],
+    ["a", "b", "c", "d", "e", "f", "g"],
+    ["a", "b", "c", "d", "f", "g"]
+];
+
+let use24Hour = true;
+let soundEnabled = false;
+
+function createDigit(number) {
+
+    return `
+        <span class="digit">
+
+            ${["a", "b", "c", "d", "e", "f", "g"]
+
+                .map(segment => `
+
+                    <i class="seg ${segment} ${
+                        digits[number].includes(segment) ? "on" : ""
+                    }"></i>
+
+                `)
+
+                .join("")}
+
+        </span>
+    `;
+}
+
+
+function updateClock() {
+
+    const now = new Date();
+
+    const formatter = new Intl.DateTimeFormat("en-GB", {
+
+        timeZone: "Asia/Kuwait",
+
+        hour: "2-digit",
+
+        minute: "2-digit",
+
+        second: "2-digit",
+
+        hourCycle: use24Hour ? "h23" : "h12"
+
+    });
+
+    const parts = formatter.formatToParts(now);
+
+    let hours = parts.find(p => p.type === "hour").value;
+    let minutes = parts.find(p => p.type === "minute").value;
+    let seconds = parts.find(p => p.type === "second").value;
+
+    hours = String(hours).padStart(2, "0");
+
+    minutes = String(minutes).padStart(2, "0");
+
+    seconds = String(seconds).padStart(2, "0");
+
+    const time = hours + minutes + seconds;
+
+    clock.innerHTML = `
+
+        ${createDigit(Number(time[0]))}
+
+        ${createDigit(Number(time[1]))}
+
+        <span class="colon">:</span>
+
+        ${createDigit(Number(time[2]))}
+
+        ${createDigit(Number(time[3]))}
+
+        <span class="colon">:</span>
+
+        ${createDigit(Number(time[4]))}
+
+        ${createDigit(Number(time[5]))}
+
+    `;
+
+    weekdayElement.textContent = new Intl.DateTimeFormat("en-US", {
+
+        timeZone: "Asia/Kuwait",
+
+        weekday: "long"
+
+    }).format(now).toUpperCase();
+
+
+    dateElement.textContent = new Intl.DateTimeFormat("en-US", {
+
+        timeZone: "Asia/Kuwait",
+
+        year: "numeric",
+
+        month: "long",
+
+        day: "numeric"
+
+    }).format(now).toUpperCase();
+
+}
+
+
+updateClock();
+
+setInterval(updateClock, 1000);
+
+
+// COLOR CONTROL
+
+const themes = {
+
+    cyan: {
+
+        color: "#00eaff",
+
+        rgb: "0, 234, 255"
+
+    },
+
+    purple: {
+
+        color: "#b45cff",
+
+        rgb: "180, 92, 255"
+
+    },
+
+    red: {
+
+        color: "#ff3c65",
+
+        rgb: "255, 60, 101"
+
+    },
+
+    green: {
+
+        color: "#00ff9d",
+
+        rgb: "0, 255, 157"
+
+    },
+
+    gold: {
+
+        color: "#ffc400",
+
+        rgb: "255, 196, 0"
+
+    }
+
+};
+
+
+document.querySelectorAll(".color-btn").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        const theme = themes[button.dataset.color];
+
+        document.documentElement.style.setProperty(
+            "--neon",
+            theme.color
+        );
+
+        document.documentElement.style.setProperty(
+            "--neon-rgb",
+            theme.rgb
+        );
+
+        document.querySelectorAll(".color-btn").forEach(btn => {
+
+            btn.classList.remove("active");
+
+        });
+
+        button.classList.add("active");
+
+        playSound(500);
+
+    });
+
+});
+
+
+// TIME FORMAT
+
+formatBtn.addEventListener("click", () => {
+
+    use24Hour = !use24Hour;
+
+    formatBtn.textContent = use24Hour
+        ? "24 HOURS"
+        : "12 HOURS";
+
+    updateClock();
+
+    playSound(700);
+
+});
+
+
+// SOUND
+
+soundBtn.addEventListener("click", () => {
+
+    soundEnabled = !soundEnabled;
+
+    soundBtn.textContent = soundEnabled
+        ? "SOUND ON"
+        : "SOUND OFF";
+
+    playSound(800);
+
+});
+
+
+function playSound(frequency = 600) {
+
+    if (!soundEnabled) return;
+
+    try {
+
+        const audio = new AudioContext();
+
+        const oscillator = audio.createOscillator();
+
+        const gain = audio.createGain();
+
+        oscillator.connect(gain);
+
+        gain.connect(audio.destination);
+
+        oscillator.frequency.value = frequency;
+
+        oscillator.type = "sine";
+
+        gain.gain.setValueAtTime(0.08, audio.currentTime);
+
+        gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            audio.currentTime + 0.15
+        );
+
+        oscillator.start();
+
+        oscillator.stop(audio.currentTime + 0.15);
+
+    } catch (error) {
+
+        console.log(error);
+
+    }
+
+}
+
+
+// FULLSCREEN
+
+fullscreenBtn.addEventListener("click", async () => {
+
+    try {
+
+        if (!document.fullscreenElement) {
+
+            await document.documentElement.requestFullscreen();
+
+            fullscreenBtn.textContent = "EXIT FULLSCREEN";
+
+        } else {
+
+            await document.exitFullscreen();
+
+            fullscreenBtn.textContent = "⛶ FULLSCREEN";
+
+        }
+
+    } catch (error) {
+
+        console.log(error);
+
+    }
+
+});
+
+
+// PARTICLES
+
+const canvas = document.querySelector("#space");
+
+const ctx = canvas.getContext("2d");
+
+let particles = [];
+
+let mouse = {
+
+    x: null,
+
+    y: null
+
+};
+
+
+function resizeCanvas() {
+
+    canvas.width = window.innerWidth;
+
+    canvas.height = window.innerHeight;
+
+    particles = [];
+
+    const amount = Math.min(
+        160,
+        Math.floor(window.innerWidth / 7)
+    );
+
+    for (let i = 0; i < amount; i++) {
+
+        particles.push({
+
+            x: Math.random() * canvas.width,
+
+            y: Math.random() * canvas.height,
+
+            size: Math.random() * 2 + 0.3,
+
+            speedX: (Math.random() - 0.5) * 0.35,
+
+            speedY: (Math.random() - 0.5) * 0.35,
+
+            opacity: Math.random() * 0.7 + 0.2
+
+        });
+
+    }
+
+}
+
+
+window.addEventListener("mousemove", event => {
+
+    mouse.x = event.x;
+
+    mouse.y = event.y;
+
+});
+
+
+function animateSpace() {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    const neon = getComputedStyle(
+        document.documentElement
+    ).getPropertyValue("--neon").trim();
+
+
+    particles.forEach(p => {
+
+        p.x += p.speedX;
+
+        p.y += p.speedY;
+
+
+        if (p.x < 0) p.x = canvas.width;
+
+        if (p.x > canvas.width) p.x = 0;
+
+        if (p.y < 0) p.y = canvas.height;
+
+        if (p.y > canvas.height) p.y = 0;
+
+
+        if (mouse.x !== null) {
+
+            const dx = p.x - mouse.x;
+
+            const dy = p.y - mouse.y;
+
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 100) {
+
+                p.x += dx * 0.005;
+
+                p.y += dy * 0.005;
+
+            }
+
+        }
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            p.size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle = neon;
+
+        ctx.globalAlpha = p.opacity;
+
+        ctx.shadowBlur = 10;
+
+        ctx.shadowColor = neon;
+
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+
+    });
+
+
+    requestAnimationFrame(animateSpace);
+
+}
+
+
+resizeCanvas();
+
+animateSpace();
+
+window.addEventListener("resize", resizeCanvas);
